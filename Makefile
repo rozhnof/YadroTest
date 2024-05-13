@@ -1,85 +1,46 @@
+PROJECT_NAME = computer-clab-manager
+
 CPPCHECK_OPTIONS = --language=c++ --enable=all --inconclusive --suppress=missingIncludeSystem 
-CMAKE = CMakeLists.txt
+SAN_OPTIONS = -D UBSAN=ON -D ASAN=ON
 
 SOURCES = $(wildcard src/*.cc)
 HEADERS = $(wildcard include/*.h)
+
 TEST_DIR = tests
+TEST_SOURCES = $(wildcard tests/*.cc)
+TEST_HEADERS = $(wildcard tests/*.h)
+
 BUILD_DEBUG_DIR = build_debug
 BUILD_RELEASE_DIR = build_release
-
-PURPLE  	= '\033[0;35m'
-YELLOW  	= '\033[1;33m'
-BLUE  		= '\033[1;36m'
-GREEN 		= '\033[0;32m'
-LIGTH_GREEN = '\033[1;32m'
-RED  		= '\033[0;31m'
-NC  		= '\033[0m'
-
 
 .PHONY: all clean check_format apply_format
 
 all: build_release
 
-build_release: $(BUILD_RELEASE_DIR)/$(CMAKE)
-	cd $(BUILD_RELEASE_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Release && make
+build_release:
+	@cmake . -B ${BUILD_RELEASE_DIR} -D CMAKE_BUILD_TYPE=Release
+	@cmake --build ${BUILD_RELEASE_DIR}
 
-build_debug: $(BUILD_DEBUG_DIR)/$(CMAKE)
-	cd $(BUILD_DEBUG_DIR) && cmake .. -DCMAKE_BUILD_TYPE=Debug -DUBSAN=ON -DASAN=ON && make
-
-$(BUILD_RELEASE_DIR)/$(CMAKE): $(CMAKE)
-	mkdir -p $(BUILD_RELEASE_DIR) && cp $< $@
-
-$(BUILD_DEBUG_DIR)/$(CMAKE): $(CMAKE)
-	mkdir -p $(BUILD_DEBUG_DIR) && cp $< $@
+build_debug:
+	@cmake . -B ${BUILD_RELEASE_DIR} -D CMAKE_BUILD_TYPE=Debug $(SAN_OPTIONS)
+	@cmake --build ${BUILD_RELEASE_DIR}
 
 check_format:
-	clang-format -n $(SOURCES) $(HEADERS)
+	@clang-format -n ${SOURCES} ${HEADERS} ${TEST_SOURCES} ${TEST_HEADERS}
 	cppcheck $(CPPCHECK_OPTIONS) $(SOURCES) $(HEADERS)
 
 apply_format:
-	clang-format -i $(SOURCES) $(HEADERS)
+	@clang-format -i ${SOURCES} ${HEADERS} ${TEST_SOURCES} ${TEST_HEADERS}
 
-test_all: 	test_release \
-			test_release_ubsan \
-			test_release_asan \ 
-			test_release_ubsan_asan \
-          	test_debug \ 
-			test_debug_ubsan \ 
-			test_debug_asan \
-			test_debug_ubsan_asan
+test_release:
+	@cmake . -B ${BUILD_RELEASE_DIR} -D CMAKE_BUILD_TYPE=Release $(SAN_OPTIONS) -D BUILD_TESTS=ON
+	@cmake --build ${BUILD_RELEASE_DIR}
+	${BUILD_RELEASE_DIR}/$(PROJECT_NAME)-test
 
-test_release: $(BUILD_RELEASE_DIR)/$(CMAKE)
-	cd $(BUILD_RELEASE_DIR) && cmake -DCMAKE_BUILD_TYPE=Release .. && make
-	cd $(BUILD_RELEASE_DIR) && ./computer-clab-manager-test
-
-test_debug: $(BUILD_DEBUG_DIR)/$(CMAKE)
-	cd $(BUILD_DEBUG_DIR) && cmake -DCMAKE_BUILD_TYPE=Debug .. && make
-	cd $(BUILD_DEBUG_DIR) && ./computer-clab-manager-test
-
-test_release_ubsan: TEST_FLAGS := -DUBSAN=ON
-test_release_ubsan: test_release
-
-test_release_asan: TEST_FLAGS := -DASAN=ON
-test_release_asan: test_release
-
-test_release_ubsan_asan: TEST_FLAGS := -DUBSAN=ON -DASAN=ON
-test_release_ubsan_asan: test_release
-
-test_debug_ubsan: TEST_FLAGS := -DUBSAN=ON
-test_debug_ubsan: test_debug
-
-test_debug_asan: TEST_FLAGS := -DASAN=ON
-test_debug_asan: test_debug
-
-test_debug_ubsan_asan: TEST_FLAGS := -DUBSAN=ON -DASAN=ON
-test_debug_ubsan_asan: test_debug
-
-$(BUILD_RELEASE_DIR)/$(CMAKE):
-	mkdir -p $(BUILD_RELEASE_DIR) && cp $(CMAKE) $@
-
-$(BUILD_DEBUG_DIR)/$(CMAKE):
-	mkdir -p $(BUILD_DEBUG_DIR) && cp $(CMAKE) $@
-
+test_debug:
+	@cmake . -B ${BUILD_RELEASE_DIR} -D DCMAKE_BUILD_TYPE=Debug $(SAN_OPTIONS) -D BUILD_TESTS=ON
+	@cmake --build ${BUILD_RELEASE_DIR}
+	${BUILD_RELEASE_DIR}/$(PROJECT_NAME)-test
 
 clean:
 	rm -rf $(BUILD_RELEASE_DIR) $(BUILD_DEBUG_DIR) 
