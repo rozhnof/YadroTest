@@ -1,12 +1,11 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(
-    computer-clab-manager
+    computer-club-manager
     LANGUAGES CXX
     VERSION 0.1
 )
 
-include(cmake/CheckCompiler.cmake)
 include(cmake/CompileOptions.cmake)
 include(cmake/Sanitize.cmake)
 include(cmake/Dependencies.cmake)

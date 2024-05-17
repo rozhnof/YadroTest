@@ -1,29 +1,31 @@
-PROJECT_NAME = computer-clab-manager
+PROJECT_NAME = computer-club-manager
 
 CPPCHECK_OPTIONS = --language=c++ --enable=all --inconclusive --suppress=missingIncludeSystem 
 SAN_OPTIONS = -D UBSAN=ON -D ASAN=ON
 
-SOURCES = $(wildcard src/*.cc)
-HEADERS = $(wildcard include/*.h)
+SOURCES = $(shell find src -name '*.cc')
+HEADERS = $(shell find include -name '*.h')
+
+SOURCES += main.cc
 
 TEST_DIR = tests
-TEST_SOURCES = $(wildcard tests/*.cc)
-TEST_HEADERS = $(wildcard tests/*.h)
+TEST_SOURCES = $(shell find $(TEST_DIR) -name '*.cc')
+TEST_HEADERS = $(shell find $(TEST_DIR) -name '*.h')
 
-BUILD_DEBUG_DIR = build_debug
 BUILD_RELEASE_DIR = build_release
+BUILD_DEBUG_DIR = build_debug
 
 .PHONY: all clean check_format apply_format
 
-all: build_release
+all: clean build_release
 
 build_release:
 	@cmake . -B ${BUILD_RELEASE_DIR} -D CMAKE_BUILD_TYPE=Release
 	@cmake --build ${BUILD_RELEASE_DIR}
 
 build_debug:
-	@cmake . -B ${BUILD_RELEASE_DIR} -D CMAKE_BUILD_TYPE=Debug $(SAN_OPTIONS)
-	@cmake --build ${BUILD_RELEASE_DIR}
+	@cmake . -B ${BUILD_DEBUG_DIR} -D CMAKE_BUILD_TYPE=Debug $(SAN_OPTIONS)
+	@cmake --build ${BUILD_DEBUG_DIR}
 
 check_format:
 	@clang-format -n ${SOURCES} ${HEADERS} ${TEST_SOURCES} ${TEST_HEADERS}
@@ -38,7 +40,7 @@ test_release:
 	${BUILD_RELEASE_DIR}/$(PROJECT_NAME)-test
 
 test_debug:
-	@cmake . -B ${BUILD_RELEASE_DIR} -D DCMAKE_BUILD_TYPE=Debug $(SAN_OPTIONS) -D BUILD_TESTS=ON
+	@cmake . -B ${BUILD_RELEASE_DIR} -D CMAKE_BUILD_TYPE=Debug $(SAN_OPTIONS) -D BUILD_TESTS=ON
 	@cmake --build ${BUILD_RELEASE_DIR}
 	${BUILD_RELEASE_DIR}/$(PROJECT_NAME)-test
 
