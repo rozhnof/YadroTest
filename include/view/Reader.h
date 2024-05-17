@@ -34,10 +34,16 @@ class Reader {
   dto::ComputerClubData ExtractComputerClubData();
 
  private:
+  std::istream& is_;
+  const std::regex pattern;
+  dto::ComputerClubData data_;
+  std::vector<model::InputEvent> event_list_;
+  std::optional<std::string> error_event_;
+
   bool IsCorrectEventFormat(const std::string& str);
 
   void ReadComputerClubData(std::istream& is);
-  bool ReadEvent(std::string str, model::InputEvent& event);
+  model::InputEvent ReadEvent(std::string str);
   dto::Time ReadTime(std::istream& is);
   model::BaseEvent::Events ReadEventId(std::istream& is);
   std::string ReadClientId(std::istream& is);
@@ -45,13 +51,6 @@ class Reader {
   std::string GetToken(std::istream& is);
 
   model::BaseEvent::Events IntToEventId(int event_id);
-
- private:
-  std::istream& is_;
-  const std::regex pattern;
-  dto::ComputerClubData data_;
-  std::vector<model::InputEvent> event_list_;
-  std::optional<std::string> error_event_;
 };
 
 }  // namespace view

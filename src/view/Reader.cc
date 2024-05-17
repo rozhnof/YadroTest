@@ -1,5 +1,6 @@
 #include <view/Reader.h>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 
 namespace view {
@@ -10,20 +11,15 @@ Reader::Reader(std::istream& is)
 }
 
 bool Reader::ReadData() {
-  ReadComputerClubData(is_);
-
-  std::string str;
-  while (std::getline(is_, str)) {
-    model::InputEvent event;
-    if (ReadEvent(str, event)) {
-      event_list_.push_back(std::move(event));
-    } else {
-      error_event_ = str;
-      event_list_.clear();
-      return false;
+  try {
+    ReadComputerClubData(is_);
+    for (std::string str; std::getline(is_, str); ) {
+        model::InputEvent event = ReadEvent(str);
+        event_list_.push_back(std::move(event));
     }
+  } catch (...) {
+    return false;
   }
-
   return true;
 }
 
@@ -48,11 +44,16 @@ void Reader::ReadComputerClubData(std::istream& is) {
   data_.work_time.start_time = ReadTime(is);
   data_.work_time.end_time = ReadTime(is);
   data_.cost_per_hour = std::stoull(GetToken(is));
+
+  if (data_.table_count < 0) {
+    throw std::invalid_argument("Table count cannot be negative");
+  } 
 }
 
-bool Reader::ReadEvent(std::string str, model::InputEvent& event) {
+model::InputEvent Reader::ReadEvent(std::string str) {
   if (!IsCorrectEventFormat(str)) {
-    return false;
+    error_event_ = str;
+    throw std::runtime_error("Incorrect event format");
   }
 
   std::stringstream ss(std::move(str));
@@ -64,14 +65,20 @@ bool Reader::ReadEvent(std::string str, model::InputEvent& event) {
     table_id = ReadTableId(ss);
   }
 
-  event =
+  return
       model::InputEvent::CreateEvent(event_time, event_id, client_id, table_id);
-  return true;
 }
 
 dto::Time Reader::ReadTime(std::istream& is) {
   std::size_t hour = std::stoull(GetToken(is));
   std::size_t minute = std::stoull(GetToken(is));
+
+  if (hour >= 24) {
+    throw std::invalid_argument("Provided hour is incorrect");
+  } else if (minute >= 60) {
+    throw std::invalid_argument("Provided minute is incorrect");
+  } 
+
   return {hour, minute};
 }
 
